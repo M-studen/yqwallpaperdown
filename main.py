@@ -1,13 +1,12 @@
 import sys
 
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QApplication, QComboBox, QHBoxLayout, \
+from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout,QComboBox, QHBoxLayout, \
     QFileDialog, QSpinBox
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import  pyqtSlot
-from spider.spider import *
-spider = spider()
-
+from PyQt5.QtCore import pyqtSlot
+from spider import Spider
+# spider = spider()
 
 class MyCustomWidget1(QWidget):
     def __init__(self, widget):
@@ -49,8 +48,10 @@ class MyCustomWidget1(QWidget):
 
     @pyqtSlot()
     def on_pushButton_clicked(self):
-        text = spider.DownloadLinkVideo(self.lineEdit1.text(), self.lineEdit2.text() + '/')
-        self.widget.textBrowser.setText(text)
+        self.s=Spider.spider(url=self.lineEdit1.text(),path=self.lineEdit2.text() + '/',func=0)
+        self.s.start()
+        self.s.finished.connect(self.updateText)
+        self.pushButton.setEnabled(False)
         self.lineEdit1.setText('')
         self.lineEdit2.setText('')
 
@@ -60,7 +61,9 @@ class MyCustomWidget1(QWidget):
         self.folderPath = self.folderDialog.getExistingDirectory(self, '选择文件夹')
         # 更新第二个输入框的文本
         lineEdit.setText(self.folderPath)
-
+    def updateText(self,result):
+        self.widget.textBrowser.setText(result)
+        self.pushButton.setEnabled(True)
 
 class MyCustomWidget2(QWidget):
     def __init__(self, widget):
@@ -79,8 +82,8 @@ class MyCustomWidget2(QWidget):
         self.lineEdit2 = QLineEdit()
         self.folderButton = QPushButton('浏览')
         self.folderButton.clicked.connect(lambda: self.openFolderDialog(self.lineEdit2))
-        self.pushButton = QPushButton("开始下载")
-        self.pushButton.clicked.connect(self.on_pushButton_clicked)
+        self.pushButton1 = QPushButton("开始下载")
+        self.pushButton1.clicked.connect(self.on_pushButton1_clicked)
         # 创建第一个水平布局并添加组件
         self.layout1 = QHBoxLayout()
         self.layout1.addWidget(self.label1)
@@ -97,7 +100,7 @@ class MyCustomWidget2(QWidget):
         self.layout3.addWidget(self.lineEdit2)
         self.layout3.addWidget(self.folderButton)
         self.layout4 = QHBoxLayout()
-        self.layout4.addWidget(self.pushButton)
+        self.layout4.addWidget(self.pushButton1)
         # 创建垂直布局并添加三个水平布局
         self.mainLayout = QVBoxLayout()
         self.mainLayout.addLayout(self.layout1)
@@ -108,18 +111,21 @@ class MyCustomWidget2(QWidget):
         self.setLayout(self.mainLayout)
 
     @pyqtSlot()
-    def on_pushButton_clicked(self):
-        self.widget.textBrowser.setText('开始下载......\n'
-                                        '下载内容过多时可能会造成未响应，请等待即可')
-        text=spider.DownloadSearchVideo(keyword=str(self.lineEdit1.text()), path=self.lineEdit2.text() + '/',page=self.spinBox.value())
-        self.update_textBrowser(text)
+    def on_pushButton1_clicked(self):
+        self.s=Spider.spider(keyword=str(self.lineEdit1.text()),path=self.lineEdit2.text() + '/',page=self.spinBox.value(),func=1,callback=self.update_textBrowser,widget=MyCustomWidget2(MyWidget))
+        # self.widget.textBrowser.setText('开始下载......\n'
+        #                                 '下载内容过多时可能会造成未响应，请等待即可')
+        # text=spider.DownloadSearchVideo(keyword=str(self.lineEdit1.text()), path=self.lineEdit2.text() + '/',page=self.spinBox.value())
+        self.s.start()
+        self.s.finished.connect(self.updatebutton)
+        self.pushButton1.setEnabled(False)
         self.lineEdit1.setText('')
         self.lineEdit2.setText('')
         self.spinBox.setValue(1)
 
     def update_textBrowser(self, text):
-        for t in text:
-            self.widget.textBrowser.append(str(t+'\n'))
+            self.widget.textBrowser.append(str(text+'\n'))
+            # self.pushButton.setEnabled(True)
 
     def openFolderDialog(self, lineEdit):
         # 打开文件夹对话框
@@ -127,11 +133,15 @@ class MyCustomWidget2(QWidget):
         self.folderPath = self.folderDialog.getExistingDirectory(self, '选择文件夹')
         # 更新第三个输入框的文本
         lineEdit.setText(self.folderPath)
+    def updatebutton(self,t):
+        self.pushButton1.setEnabled(True)
+
 
 
 class MyWidget(QWidget):
     def __init__(self):
         super().__init__()
+        #捐款弹窗
         # 创建下拉框和自定义组件
         self.comboBox = QComboBox()
         self.customWidget1 = MyCustomWidget1(widget=self)
@@ -193,6 +203,7 @@ class MyWidget(QWidget):
         self.currentWidget.show()
         layout = self.placeholderWidget.layout()
         layout.addWidget(self.currentWidget)
+
 
 
 if __name__ == "__main__":

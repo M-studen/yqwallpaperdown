@@ -2,13 +2,21 @@ import requests
 from bs4 import BeautifulSoup
 import config
 import os
+from PyQt5.QtCore import QThread,pyqtSignal
 
-
-class spider:
+class spider(QThread):
     headers = config.config.headers
+    finished = pyqtSignal(str)
 
-    def __init__(self):
-        pass
+    def __init__(self,path,func,widget=None,callback=None,url=None,keyword=None,page=1,):
+        super().__init__()
+        self.url=url
+        self.path=path
+        self.keyword=keyword
+        self.func=func
+        self.page=page
+        self.callback=callback
+        self.widget=widget
 
     def GetVideo(self, url):  # 获取指定壁纸页面中的视频链接，返回一个元组，第一个元素为视频链接，第二个元素为视频标题
         res = requests.get(url=url, headers=self.headers).text
@@ -54,9 +62,19 @@ class spider:
         return "{}.mp4 Done!".format(self.GetVideo(url)[1])
 
 
-    def DownloadSearchVideo(self, keyword: str, path, page: int = 1):
+    def DownloadSearchVideo(self, keyword: str, path,callback, page: int = 1,):
         print("running")
         for i in self.GetSearchVideo(keyword, page):
             data = requests.get(i[0], headers=self.headers).content
             self.DownloadVideo(url=i[0], path=path, data=data, name=i[1])
-            yield "{}.mp4 Done!".format(i[1])
+            self.callback("{}.mp4 Done!".format(i[1]))
+        return '0'
+
+
+    def run(self):
+        if self.func==0:
+            result=self.DownloadLinkVideo(self.url,self.path)
+            self.finished.emit(result)
+        elif self.func==1:
+            result=self.DownloadSearchVideo(self.keyword,self.path,self.page)
+            self.finished.emit(result)
